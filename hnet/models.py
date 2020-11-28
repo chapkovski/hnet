@@ -15,6 +15,8 @@ class Raw(TrackerModel):
     body = models.TextField()
     url = models.URLField()
 
+class UnfoundRecord(TrackerModel):
+    external_id = models.IntegerField()
 
 class GeneralCategory(TrackerModel):
     description = models.CharField(max_length=1000, unique=True)
@@ -39,6 +41,10 @@ class Position(GeneralCategory):
 
 
 class StructuredPost(TrackerModel):
+    """
+    That is the class we we store rendered data. It contains link to the orininal data
+    plus some parsed info - text of the ad, categories (primary and secondary) etc.
+    """
     original = models.ForeignKey(to=Raw, on_delete=models.CASCADE)
     primary_categories = models.ManyToManyField(Category, blank=True, related_name='primary_posts')
     secondary_categories = models.ManyToManyField(Category, blank=True, related_name='secondary_posts')
