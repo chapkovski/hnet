@@ -10,7 +10,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 class Command(BaseCommand):
-    help = 'Collect data from hnet'
+    help = 'Process collected data from hnet'
 
     def add_arguments(self, parser):
         parser.add_argument('start', nargs='+', type=int)
@@ -19,18 +19,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         start = options.get('start',[0])[0]
         finish = options.get('finish',[0])[0]
-        # Let's get only those which are not already in our db
-        initial_list = set(range(start, finish+1))
-        done = Raw.objects.filter(external_id__lte=finish, external_id__gte=start).values_list('external_id', flat=True)
-        todo = list(initial_list - set(done))
-        if not todo:
-            self.stdout.write(self.style.ERROR(f'NOTHGING TO DO!'))
-            return
-
         with FuturesSession() as s:
             idre = '\?id=(?P<external>\d*)$'
             head = 'https://www.h-net.org/jobs/job_display.php?id='
-            futures = [s.get(f'{head}{i}') for i in todo]
+            futures = [s.get(f'{head}{i}') for i in range(start, finish+1)]
             for future in as_completed(futures):
                 page = future.result()
                 m = re.search(idre, page.url)
@@ -39,9 +31,16 @@ class Command(BaseCommand):
                     soup = BeautifulSoup(page.text, 'html.parser')
                     error = soup.find('p', class_='error')
                     if error:
-                        self.stdout.write(self.style.WARNING(f'NOT FOUND:  {external}'))
+                        logger.warning(f'NOT FOUND:  {external}')
                     else:
-                        Raw.objects.create(external_id=external, url=page.url, body=page.text)
-                        self.stdout.write(self.style.SUCCESS(f'Created {external}'))
+                        try:
+                            Raw.objects.get(external_id=external)
+                            logger.warning(f'{external} already exists')
+                        except Raw.DoesNotExist:
+                            self.stdout.write(self.style.SUCCESS(f'Creating {external}'))
+                            
+                            Raw.objects.create(
+                                external_id=external, url=page.url, body=page.text)
+
                 else:
                     raise Exception(f'WRONG CODE for {page.url}:{page.status_code}')
