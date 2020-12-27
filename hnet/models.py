@@ -49,6 +49,7 @@ class StructuredPost(TrackerModel):
     plus some parsed info - text of the ad, categories (primary and secondary) etc.
     """
     original = models.OneToOneField(to=Raw, on_delete=models.CASCADE)
+    main_category = models.ForeignKey(to=Category, blank=True, null=True, on_delete=models.CASCADE)
     primary_categories = models.ManyToManyField(Category, blank=True, related_name='primary_posts')
     secondary_categories = models.ManyToManyField(Category, blank=True, related_name='secondary_posts')
     body = models.TextField(blank=True, null=True)
@@ -58,4 +59,4 @@ class StructuredPost(TrackerModel):
     posting_date = models.DateTimeField(blank=True, null=True)
     closing_date = models.DateTimeField(blank=True, null=True)
     website = models.URLField(blank=True, null=True)
-    contact = models.CharField(blank=True, null=True, max_length=1000, )
+    contact = models.CharField(blank=True, null=True, max_length=10000, )
